@@ -87,7 +87,7 @@ class ODS
   end
 
   def add_row(row)
-    raise "The number of rows doesn't match" if row.size != @table_cols
+    raise "The number of rows doesn't match #{@table_cols}, diferente de #{row.size}" if row.size != @table_cols
     @buffer.write(ROW_HEADER)
     row.each do |cell|
       if numeric?(cell.to_s)
@@ -114,45 +114,43 @@ class ODS
 
 end
 class Producto
-	attr_reader :nombre, :edad, :estatura
+	attr_reader :nombre
 
-	def initialize(nombre, edad, estatura)
+	def initialize(nombre)
     @nombre=nombre
-    @edad=edad
-    @estatura=estatura
-	end
-
-	def to_s
-		"NOMBRE: #{nombre} EDAD: #{edad} ESTATURA: #{estatura}"
 	end
 end
 class CSV_TO_ODS
-  archivo_output="dd"
-  tabla="sr"
-  archivo_input="out.csv"
-	def initialize(archivo_input, archivo_output, tabla)
-    @archivo_output=tabla
-    @tabla=tabla
+
+	def initialize(archivo_input, archivo_output)
+    @archivo_output=archivo_output
     @archivo_input=archivo_input
 	end
   def crear
-  productos=[]
-  CSV.foreach(@archivo_input) do |fila|
-  	productos.push Producto.new(fila[0], fila[1], fila[2])
-  end
-  aux=ODS.new(@archivo_output)
-  aux.open_table(@tabla, 3)
-  atrev=[]
-  productos.each do |chico|
-  	atrev[0]=chico.nombre
-  	atrev[1]=chico.edad
-  	atrev[2]=chico.estatura
-    aux.add_row(atrev)
-  end
-  aux.close_table
-  aux.close_file
+aux=ODS.new(@archivo_output.to_s)
+    Zip::File.open(@archivo_input) do |zipfile|
+      zipfile.each do |file|
+        puts file
+        temp=45
+        productos=[]
+        CSV.foreach("#{file}") do |fila|
+  	       productos.push Producto.new(fila)
+           temp=fila.size
+        end
+        puts temp
+        aux.open_table("#{file}", temp)
+        atrev=[]
+        productos.each do |chico|
+    	      atrev=chico
+            aux.add_row(atrev)
+        end
+        aux.close_table
+        end
+      end
+      aux.close_file
   end
 end
+=begin
 puts "Indica el archivo de entrada"
 entrada=gets().chomp().to_s
 puts "Indica el nombre del archivo de salida"
@@ -161,3 +159,30 @@ puts "Indica el nombre de la tabla"
 tabla=gets().chomp().to_s
 abc=CSV_TO_ODS.new(entrada, salida, tabla)
 abc.crear
+=end
+
+=begin
+class ZIP_TO_ODS
+  input="r"
+  output="g"
+  def initialize(input, output)
+    @input=input
+    @output=output
+	end
+  def crear
+    Zip::File.open(@input) do |zipfile|
+      zipfile.each do |file|
+
+        abc=CSV_TO_ODS.new(file, "#{@output}", file.to_s, @input)
+        abc.crear
+      end
+    end
+  end
+end
+=end
+puts "Ingresa fuente"
+input=gets().chomp().to_s
+puts "Ingresa salida"
+output=gets().chomp().to_s
+ini=CSV_TO_ODS.new(input, output)
+ini.crear
